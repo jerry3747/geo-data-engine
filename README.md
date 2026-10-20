@@ -1,8 +1,13 @@
 <div align="center">
 
-# geo-data-engine
+# 🌍 geo-data-engine
 
 **Geo Data Engine** — a multi-platform AI data engine that collects search/Q&A answers from 7 AI platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) through their **web UIs**, with a Redis-based **distributed worker** mode and a built-in **FastAPI + SQLite** management dashboard.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)
+![Platforms](https://img.shields.io/badge/platforms-7%20AI%20Apps-8A2BE2)
+![GitHub stars](https://img.shields.io/github/stars/jerry3747/geo-data-engine?style=social)
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -28,19 +33,19 @@
 - [License](#license)
 - [Contributing](#contributing)
 
-## Features
+## ✨ Features
 
-- **7 platforms, one interface** — query all platforms with a keyword list, results are saved as structured JSON + readable Markdown.
-- **Batch mode with keyword-first ordering** — for each keyword, iterate through all platforms before moving to the next keyword (keyword → platform).
-- **Smart deduplication** — `(keyword, platform)` pairs already collected successfully on the same day are automatically skipped; failed ones are retried.
-- **Single MCP connection with persistent tabs** — one Playwright MCP connection is reused, each platform keeps one resident tab for the whole batch; tabs are closed only at the end.
-- **Rate-limit aware** — detects captcha / rate limiting / busy states, skips automatic retries and aborts the rest of the batch for that platform.
-- **Daily CSV export** — one-click aggregation of all successful results per day (platform / keyword / answer), UTF-8 BOM so Excel opens it directly.
-- **Distributed mode** — run `worker.py` on multiple machines, grab keyword batches from a Redis queue, push results back to Redis; no local file writes.
-- **Built-in management dashboard** — FastAPI + SQLite web UI for creating tasks, tracking progress, rerunning failures and exporting CSV.
-- **Crash recovery** — workers automatically reprocess their leftover batches on restart; heartbeats keep the management UI online.
+- 🎯 **7 platforms, one interface** — query all platforms with a keyword list, results are saved as structured JSON + readable Markdown.
+- 🔁 **Batch mode with keyword-first ordering** — for each keyword, iterate through all platforms before moving to the next keyword (keyword → platform).
+- 🧠 **Smart deduplication** — `(keyword, platform)` pairs already collected successfully on the same day are automatically skipped; failed ones are retried.
+- 🔌 **Single MCP connection with persistent tabs** — one Playwright MCP connection is reused, each platform keeps one resident tab for the whole batch; tabs are closed only at the end.
+- 🛡️ **Rate-limit aware** — detects captcha / rate limiting / busy states, skips automatic retries and aborts the rest of the batch for that platform.
+- 📈 **Daily CSV export** — one-click aggregation of all successful results per day (platform / keyword / answer), UTF-8 BOM so Excel opens it directly.
+- 🖧 **Distributed mode** — run `worker.py` on multiple machines, grab keyword batches from a Redis queue, push results back to Redis; no local file writes.
+- 🖥️ **Built-in management dashboard** — FastAPI + SQLite web UI for creating tasks, tracking progress, rerunning failures and exporting CSV.
+- 💪 **Crash recovery** — workers automatically reprocess their leftover batches on restart; heartbeats keep the management UI online.
 
-## Supported Platforms
+## 🤖 Supported Platforms
 
 | Platform | Script | URL | Status |
 |---|---|---|---|
@@ -52,7 +57,7 @@
 | 腾讯元宝 Yuanbao | `scripts/yuanbao.py` | <https://yuanbao.tencent.com/> | ✅ Implemented |
 | 小红书 Xiaohongshu | `scripts/xiaohongshu.py` | <https://www.xiaohongshu.com/ai_chat> | ✅ Implemented |
 
-## How It Works
+## ⚙️ How It Works
 
 The crawler drives a **real browser** (Chrome) through the [Playwright MCP](https://github.com/microsoft/playwright-mcp) extension. It takes over your already-logged-in Chrome, opens a new conversation on each platform's web page, types the keyword with real keystrokes, waits for the streaming answer to finish, then extracts the answer text and reference links.
 
@@ -68,7 +73,7 @@ For every `(keyword, platform)` unit, the crawler first checks whether a success
 - **Exists** → skip (deduplicated, not collected again)
 - **Missing** → collect and save
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 scripts/
@@ -108,7 +113,7 @@ data/                 # Crawled results, one directory per day (gitignored)
         └──────────────────────────────┘
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 > **Prerequisites:** Python 3.10+, Chrome with the [Playwright MCP extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) installed, and the target platforms logged in.
 
@@ -131,7 +136,7 @@ python scripts/search.py --keywords "keyword1,keyword2"
 > By default the project uses a locally cached `@playwright/mcp` binary; set `PLAYWRIGHT_MCP_BIN` to override (otherwise it falls back to `npx @playwright/mcp@latest --extension`).
 > Use `python` on Windows and `python3` on macOS/Linux.
 
-## Usage
+## 📦 Usage
 
 ```bash
 # Batch collection (recommended): each keyword is queried across all platforms
@@ -162,7 +167,7 @@ python scripts/search.py --keywords "keyword" --wait-rounds 90 --round-secs 3 --
 | `--round-secs` | Seconds per polling round (default `3`) |
 | `--screenshot` | Also save a page screenshot |
 
-## Distributed Mode (Multi-Machine)
+## 🌐 Distributed Mode (Multi-Machine)
 
 Run `worker.py` on every crawler machine — workers pull keyword batches from a Redis queue and crawl in parallel. The built-in **management dashboard** (`admin/`) owns the queue, tracks progress and persists results:
 
@@ -190,7 +195,7 @@ The MCP token still comes from the environment variable `PLAYWRIGHT_MCP_EXTENSIO
 - Results are pushed to the Redis result queue and persisted to **SQLite** by the admin's built-in consumer.
 - Heartbeats (60s expiry) feed the online-machine list; workers handle their leftover batches on restart; the dashboard can re-queue stuck units.
 
-## Management Dashboard
+## 🖥️ Management Dashboard
 
 The built-in dashboard (`admin/`, FastAPI + SQLite + Redis) gives you a web UI to orchestrate distributed collection — no external backend required:
 
@@ -231,7 +236,7 @@ python -m admin.main            # or: uvicorn admin.main:app --host 0.0.0.0 --po
 
 Then open <http://localhost:8843>. The dashboard reads `REDIS_URL` from `worker_config.py` (or the `REDIS_URL` env var); without Redis it still starts and you can browse tasks, but queue/worker/creation endpoints return a clear message.
 
-## Export Results to CSV
+## 📊 Export Results to CSV
 
 Aggregate all successful results of a day (or a given date) into one CSV with columns `平台名称 / 关键词 / 答案` (platform / keyword / answer). The file is named by date and written with a UTF-8 BOM so Excel opens it directly. Failed / empty records are skipped.
 
@@ -241,7 +246,7 @@ python scripts/export_csv.py --date 2026-09-07   # a specific date
 python scripts/export_csv.py --out D:/tmp/xx.csv # custom output path
 ```
 
-## Output Structure
+## 📁 Output Structure
 
 Results are saved under `data/<date>/<platform>/`:
 
@@ -263,7 +268,7 @@ data/
 - **Granularity:** `(keyword, platform)`. A successful record (status=ok with a non-empty answer) for the same platform and keyword on the same day is skipped; failed records are not counted and will be retried.
 - **Scope:** per calendar day, based on the `data/<date>/` directory; a new day starts fresh.
 
-## Extending to a New Platform
+## 🔌 Extending to a New Platform
 
 1. Create `scripts/<platform>.py` implementing `run(keyword, **kwargs) -> dict` (returns the result dict with at least `status` and `answer`) and `print_result(result)`.
 2. Register it in the `PLATFORMS` dict (and optionally `EXTRA_ARGS`, `PLATFORM_URLS`) in `scripts/search.py`.
@@ -272,24 +277,24 @@ data/
 
 **Resident-tab closing gotcha:** tabs must be closed by index in **descending** order (indexes shift after each close, so forward order closes the wrong / misses tabs); do not use `browser_close` (page.close) — it rebuilds the extension relay page and creates a new extension tab.
 
-## Known Limitations
+## ⚠️ Known Limitations
 
 - Depends on real browser login state; login, CAPTCHA and risk control are not handled.
 - Does not use non-public platform APIs — only answers and references displayed on the page are collected.
 - Answers are AI-generated content and may be wrong; they are saved as-is with a "may contain errors" note.
 - Batch collection is serial (one browser); many keywords take a long time — use `--keywords-file` to split into batches.
 
-## Disclaimer & Compliance
+## ⚖️ Disclaimer & Compliance
 
 - **For legal & ethical use only.** Only collect content you are authorized to access, and respect the terms of service, robots.txt and rate limits of each platform. Be mindful of your accounts.
 - The crawler uses real logged-in browser sessions and does **not** bypass login walls, CAPTCHA or rate limiting. This is a feature, not a bug.
 - The software is provided "as is", without warranty of any kind. You are solely responsible for how you use it and for any consequences. The authors and contributors are not liable for any damages arising from the use of this software.
 - AI-generated answers may contain errors; verify important information before relying on it.
 
-## License
+## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, and check [SECURITY.md](SECURITY.md) if you find a security issue. Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
