@@ -18,9 +18,18 @@
 详见 README「扩展新平台」章节。核心要求：
 
 - 新建 `scripts/<platform>.py`，实现 `run(keyword, **kwargs) -> dict` 与 `print_result(result)`；
-- 在 `scripts/search.py` 的 `PLATFORMS`（以及必要的 `EXTRA_ARGS` / `PLATFORM_URLS`）注册；
+- 在 `scripts/search.py` 的 `PLATFORMS`（以及必要的 `EXTRA_ARGS` / `PLATFORM_URLS`）注册，并同步 `admin/main.py` 的 `SUPPORTED_PLATFORMS`；
 - 平台 DOM/踩坑记录写入 `references/<platform>.md`；
 - 本地用 `python scripts/search.py --platform <platform> --keyword "测试"` 验证通过。
+
+## 管理后台
+
+`admin/` 是内置管理后台（FastAPI + SQLite + Redis），与 `worker.py` 共用 `worker_config.py` 的 `REDIS_URL`。改动时注意：
+
+- Redis 队列/心跳/判重 key 必须与 `worker.py` 严格对齐（见 `admin/redis_client.py` 顶部注释）；
+- SQLite 表结构变更需在 `admin/database.py` 的 `SCHEMA` 中同步（表由启动时 `init_db()` 自动创建）；
+- Web UI 是 `admin/templates/index.html` 原生单页，新增功能需同时提供 API 与页面交互；
+- 运行：`python -m admin.main`（默认 8000 端口）。
 
 ## 代码规范
 

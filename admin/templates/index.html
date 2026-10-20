@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>geo-data-engine 管理后台</title>
+<style>
+  :root { --bg:#0f1115; --card:#1a1d24; --border:#2a2e37; --text:#e6e8eb;
+          --muted:#9aa0a8; --accent:#4c8dff; --ok:#2ecc71; --fail:#e74c3c;
+          --blocked:#f39c12; --pending:#95a5a6; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:24px; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:20px; }
+  .card h2 { font-size:16px; margin-bottom:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+  .stat { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .stat .num { font-size:26px; font-weight:700; }
+  .stat .lbl { color:var(--muted); font-size:12px; margin-top:2px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
+  textarea, input, select { width:100%; background:#12141a; border:1px solid var(--border);
+    color:var(--text); border-radius:6px; padding:8px 10px; font-size:14px; }
+  button { background:var(--accent); color:#fff; border:none; border-radius:6px;
+    padding:9px 16px; font-size:14px; cursor:pointer; margin-top:12px; }
+  button:hover { opacity:.9; }
+  button.ghost { background:transparent; border:1px solid var(--border); color:var(--text); margin-left:6px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--muted); font-weight:600; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:12px; }
+  .b-ok { background:rgba(46,204,113,.15); color:var(--ok); }
+  .b-failed { background:rgba(231,76,60,.15); color:var(--fail); }
+  .b-blocked { background:rgba(243,156,18,.15); color:var(--blocked); }
+  .b-pending { background:rgba(149,165,166,.15); color:var(--pending); }
+  .b-skipped { background:rgba(149,165,166,.15); color:var(--muted); }
+  .b-running { background:rgba(76,141,255,.15); color:var(--accent); }
+  .row { display:flex; gap:12px; }
+  .row > div { flex:1; }
+  .err { color:var(--fail); font-size:12px; margin-top:4px; white-space:pre-wrap; word-break:break-all; }
+  a { color:var(--accent); text-decoration:none; }
+  .actions a { margin-right:8px; font-size:12px; }
+</style>
+</head>
+<body>
+
+<h1>geo-data-engine 管理后台</h1>
+<div class="sub">多平台 AI 数据采集 · FastAPI + SQLite · Redis 队列</div>
+
+<!-- 状态栏 -->
+<div class="grid" style="margin-bottom:20px;">
+  <div class="stat"><div class="num" id="st-workers">-</div><div class="lbl">在线 worker</div></div>
+  <div class="stat"><div class="num" id="st-chunks">-</div><div class="lbl">待处理批次</div></div>
+  <div class="stat"><div class="num" id="st-results">-</div><div class="lbl">结果队列</div></div>
+  <div class="stat"><div class="num" id="st-tasks">-</div><div class="lbl">任务总数</div></div>
+</div>
+
+<!-- 建任务 -->
+<div class="card">
+  <h2>新建采集任务</h2>
+  <label>关键词（每行一个）</label>
+  <textarea id="kw-input" rows="4" placeholder="演唱会带什么装备最实用&#10;2026 年 AI 趋势"></textarea>
+  <label>平台（留空 = 全部；逗号分隔）</label>
+  <input id="platform-input" placeholder="doubao,deepseek,kimi,qwen,metaso,yuanbao,xiaohongshu">
+  <div class="row">
+    <div><label>等待轮数 wait_rounds</label><input id="wait-rounds" type="number" value="60"></div>
+    <div><label>每轮秒数 round_secs</label><input id="round-secs" type="number" value="0.1" step="0.1"></div>
+    <div><label>每批单元数 chunk_size</label><input id="chunk-size" type="number" value="8"></div>
+  </div>
+  <button onclick="createTask()">创建任务并入队</button>
+  <div class="err" id="create-msg"></div>
+</div>
+
+<!-- 任务列表 -->
+<div class="card">
+  <h2>任务列表</h2>
+  <table>
+    <thead><tr><th>ID</th><th>关键词</th><th>平台</th><th>进度</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody id="task-body"><tr><td colspan="7">加载中...</td></tr></tbody>
+  </table>
+</div>
+
+<!-- 任务详情 -->
+<div class="card" id="detail-card" style="display:none;">
+  <h2>任务详情 <span id="detail-title" style="color:var(--muted);font-size:13px;"></span></h2>
+  <div style="margin-bottom:10px;">
+    <button class="ghost" onclick="exportCsv()">导出 CSV</button>
+    <button class="ghost" onclick="rerunFailed()">重跑失败单元</button>
+    <button class="ghost" onclick="closeDetail()">收起</button>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>平台</th><th>关键词</th><th>状态</th><th>worker</th><th>查询时间</th><th>错误</th><th></th></tr></thead>
+    <tbody id="unit-body"></tbody>
+  </table>
+</div>
+
+<!-- worker 列表 -->
+<div class="card">
+  <h2>在线 Worker</h2>
+  <table>
+    <thead><tr><th>ID</th><th>主机</th><th>IP</th><th>状态</th><th>当前批次</th><th>版本</th><th>最后心跳</th></tr></thead>
+    <tbody id="worker-body"><tr><td colspan="7">加载中...</td></tr></tbody>
+  </table>
+</div>
+
+<script>
+let currentTask = null;
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  if (!res.ok) { const t = await res.text(); throw new Error(t); }
+  return res.json();
+}
+
+async function refreshStats() {
+  try {
+    const w = await api('/api/workers');
+    const q = await api('/api/health');
+    document.getElementById('st-workers').textContent = (w.workers || []).length;
+    if (q.queues) {
+      document.getElementById('st-chunks').textContent = q.queues.chunks;
+      document.getElementById('st-results').textContent = q.queues.results;
+    } else {
+      document.getElementById('st-chunks').textContent = 'Redis 离线';
+      document.getElementById('st-results').textContent = '-';
+    }
+  } catch (e) { /* ignore */ }
+}
+
+async function refreshTasks() {
+  try {
+    const tasks = await api('/api/tasks?limit=30');
+    const tb = document.getElementById('task-body');
+    if (!tasks.length) { tb.innerHTML = '<tr><td colspan="7">暂无任务</td></tr>'; return; }
+    document.getElementById('st-tasks').textContent = tasks.length;
+    tb.innerHTML = tasks.map(t => {
+      const total = t.total_units || 0;
+      const ok = t.ok_units || 0;
+      const badge = badgeHtml(t.status);
+      const pct = total ? Math.round((ok / total) * 100) : 0;
+      return `<tr>
+        <td>${t.id}</td>
+        <td>${(t.keywords||'').split(',').slice(0,3).join('、')}${(t.keywords||'').split(',').length>3?' …':''}</td>
+        <td>${(t.platforms||'').split(',').join(' ')}</td>
+        <td>${ok}/${total} (${pct}%)</td>
+        <td>${badge}</td>
+        <td>${t.created_at}</td>
+        <td><a href="javascript:void(0)" onclick="showDetail(${t.id})">详情</a></td>
+      </tr>`;
+    }).join('');
+  } catch (e) { /* ignore */ }
+}
+
+function badgeHtml(s) {
+  const cls = { 'ok':'b-ok','failed':'b-failed','blocked':'b-blocked','pending':'b-pending',
+                'running':'b-running','skipped':'b-skipped' }[s] || 'b-pending';
+  return `<span class="badge ${cls}">${s}</span>`;
+}
+
+async function refreshWorkers() {
+  try {
+    const data = await api('/api/workers');
+    const wb = document.getElementById('worker-body');
+    const ws = data.workers || [];
+    if (!ws.length) { wb.innerHTML = '<tr><td colspan="7">无在线 worker</td></tr>'; return; }
+    wb.innerHTML = ws.map(w => `<tr>
+      <td>${w.id}</td>
+      <td>${w.hostname||''}</td>
+      <td>${w.ip||''}</td>
+      <td>${badgeHtml(w.status||'')}</td>
+      <td>${w.current_chunk_seq||''}</td>
+      <td>${w.version||''}</td>
+      <td>${w.last_heartbeat||''}</td>
+    </tr>`).join('');
+  } catch (e) { /* ignore */ }
+}
+
+async function createTask() {
+  const el = document.getElementById('create-msg');
+  el.textContent = '';
+  const keywords = document.getElementById('kw-input').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!keywords.length) { el.textContent = '请填写至少一个关键词'; return; }
+  const platforms = document.getElementById('platform-input').value.split(',').map(s=>s.trim()).filter(Boolean);
+  try {
+    const body = {
+      keywords,
+      platforms: platforms.length ? platforms : null,
+      wait_rounds: parseInt(document.getElementById('wait-rounds').value) || 60,
+      round_secs: parseFloat(document.getElementById('round-secs').value) || 0.1,
+      chunk_size: parseInt(document.getElementById('chunk-size').value) || 8,
+    };
+    const r = await api('/api/tasks', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    el.style.color = 'var(--ok)';
+    el.textContent = `已创建任务 #${r.task_id}（${r.units} 个单元，${r.chunks} 个批次）`;
+    refreshTasks();
+  } catch (e) {
+    el.style.color = 'var(--fail)';
+    el.textContent = '创建失败: ' + e.message;
+  }
+}
+
+async function showDetail(taskId) {
+  const d = await api('/api/tasks/' + taskId);
+  currentTask = d.task;
+  document.getElementById('detail-card').style.display = 'block';
+  document.getElementById('detail-title').textContent = `#${d.task.id} · ${(d.task.keywords||'').split(',').slice(0,5).join('、')}`;
+  const body = document.getElementById('unit-body');
+  body.innerHTML = d.units.map((u,i) => `<tr>
+    <td>${i+1}</td>
+    <td>${u.platform}</td>
+    <td>${u.keyword}</td>
+    <td>${badgeHtml(u.status)}</td>
+    <td>${u.worker_id||''}</td>
+    <td>${u.queried_at||''}</td>
+    <td class="err">${u.error||''}</td>
+    <td>${u.status==='failed'||u.status==='blocked' ? `<a href="javascript:void(0)" onclick="reenqueue(${u.id})">重跑</a>` : ''}</td>
+  </tr>`).join('');
+}
+
+function closeDetail() { document.getElementById('detail-card').style.display = 'none'; currentTask = null; }
+
+async function rerunFailed() {
+  if (!currentTask) return;
+  const r = await api(`/api/tasks/${currentTask.id}/rerun-failed`, { method: 'POST' });
+  alert(r.message || `已重置 ${r.reset} 个单元`);
+  showDetail(currentTask.id);
+}
+
+async function reenqueue(unitId) {
+  if (!currentTask) return;
+  const r = await api(`/api/tasks/${currentTask.id}/units/${unitId}/reenqueue`, { method: 'POST' });
+  alert(r.message);
+  showDetail(currentTask.id);
+}
+
+function exportCsv() {
+  if (!currentTask) return;
+  window.location.href = `/api/export/tasks/${currentTask.id}.csv`;
+}
+
+// 定时刷新
+refreshStats(); refreshTasks(); refreshWorkers();
+setInterval(refreshStats, 5000);
+setInterval(refreshTasks, 5000);
+setInterval(refreshWorkers, 5000);
+</script>
+</body>
+</html>

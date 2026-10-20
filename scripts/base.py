@@ -213,7 +213,7 @@ class PlaywrightMCP:
             print("未连接到MCP服务器")
             return True
 
-        print("正在手动断开MCP服务器连接...")
+        print("正在断开MCP服务器连接...")
         await self._cleanup()
         print("MCP服务器已断开连接")
         return True
@@ -384,6 +384,33 @@ class PlaywrightMCP:
         """
         res = await self.run_code(code)
         return res or "CLOSE_FAIL"
+
+    async def close_extension_tabs(self):
+        """关闭 Playwright MCP 扩展自带的 relay/欢迎页（chrome-extension:// 开头的 tab）。
+
+        关闭常驻 tab（或 page.close）后，扩展会留下一个空白欢迎页（显示 "mcp connected."）。
+        列出所有 tab，识别扩展页并按索引倒序关闭；普通网页（http/https）不受影响。"""
+        try:
+            text = await self.call_tool("browser_tabs", {"action": "list"})
+        except Exception:
+            return
+        raw = (text.content[0].text if text and getattr(text, "content", None) else None) or str(text)
+        ext_indices = []
+        for line in str(raw).splitlines():
+            m = re.match(r"^\s*(\d+):\s+(\S+)", line)
+            if not m:
+                continue
+            idx, url = int(m.group(1)), m.group(2)
+            if url.startswith("chrome-extension://") or "chrome-extension" in url:
+                ext_indices.append(idx)
+        if not ext_indices:
+            return
+        print("  [cleanup] 关闭 %d 个 Playwright MCP 扩展页（倒序）..." % len(ext_indices))
+        for idx in sorted(ext_indices, reverse=True):
+            try:
+                await self.call_tool("browser_tabs", {"action": "close", "index": idx})
+            except Exception:
+                pass
 
 
 # ----------------------------------------------------------

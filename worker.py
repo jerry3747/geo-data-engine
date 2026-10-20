@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""分布式 AI 搜索爬虫 worker（零本地落盘）
+"""分布式 AI 数据采集 worker（零本地落盘）
 
-每台爬虫电脑上运行本脚本：从 Redis 队列抢"关键词批次"，按 关键词 -> 平台 串行
-执行现有 6 平台采集逻辑，每个 (关键词, 平台) 的结果消息推到 Redis，由 flasky
-后台消费者落 SQL Server。本进程不连 SQL Server、不写任何本地数据文件。
+每台采集电脑上运行本脚本：从 Redis 队列抢"关键词批次"，按 关键词 -> 平台 串行
+执行现有 7 平台采集逻辑，每个 (关键词, 平台) 的结果消息推到 Redis，由内置管理后台
+（admin/）的消费者落 SQLite。本进程不连数据库、不写任何本地数据文件。
 
 配置：全部写在同目录（项目根目录）worker_config.py（参考 worker_config.example.py）：
-  REDIS_URL        Redis 连接串（必填）
+  REDIS_URL        Redis 连接串（必填，与管理后台共用）
   WORKER_ID        本机 worker 标识（默认 主机名-随机后缀）
   WAIT_ROUNDS      单次采集最长等待轮数（默认 60）
   ROUND_SECS       每轮等待秒数（默认 3）
@@ -268,7 +268,7 @@ class Worker:
             print("[worker %s] Redis 连接成功（版本 %s）" % (self.worker_id, ver))
         except Exception as e:
             print("[worker %s] 启动失败：无法连接 Redis（%s）。"
-                  "请确认 worker_config.py 的 REDIS_URL 与 flasky 配置一致、网络可达、密码正确。" % (self.worker_id, str(e)[:160]))
+                  "请确认 worker_config.py 的 REDIS_URL 与管理后台配置一致、网络可达、密码正确。" % (self.worker_id, str(e)[:160]))
             sys.exit(2)
         self.recover_processing()
         self.heartbeat("idle")

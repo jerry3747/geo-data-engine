@@ -1,4 +1,4 @@
-# 通用注意事项（多平台 AI 搜索共用）
+# 通用注意事项（多平台 AI 数据采集共用）
 
 ## 1. 所有鼠标/键盘操作必须真实手势
 点击、输入、回车一律走 `browser_run_code_unsafe` + `locator().click()` / `pressSequentially()` / `page.keyboard.press()`。

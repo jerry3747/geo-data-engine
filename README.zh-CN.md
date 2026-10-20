@@ -1,8 +1,8 @@
-# AI Search Crawler（多平台 AI 搜索爬虫）
+# geo-data-engine（Geo 数据引擎）
 
 <div align="center">
 
-**多平台 AI 搜索爬虫** —— 通过 **网页版** 从 7 个 AI 平台（豆包 / DeepSeek / Kimi / 千问 / 秘塔 / 元宝 / 小红书）采集搜索/问答结果，支持基于 Redis 的**分布式多机并行采集**。
+**Geo 数据引擎** —— 通过 **网页版** 从 7 个 AI 平台（豆包 / DeepSeek / Kimi / 千问 / 秘塔 / 元宝 / 小红书）采集搜索/问答结果，支持基于 Redis 的**分布式多机并行采集**，并内置 **FastAPI + SQLite 管理后台**。
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -19,6 +19,7 @@
 - [快速开始](#快速开始)
 - [使用方法](#使用方法)
 - [分布式采集模式（多机并行）](#分布式采集模式多机并行)
+- [管理后台](#管理后台)
 - [按天汇总导出 CSV](#按天汇总导出-csv)
 - [输出结构](#输出结构)
 - [扩展新平台](#扩展新平台)
@@ -36,6 +37,7 @@
 - **限流感知** —— 自动识别验证码 / 限流 / 繁忙状态，跳过自动重试并对该平台中止本批次剩余关键词。
 - **按天汇总导出 CSV** —— 一键汇总当日全部成功结果（平台 / 关键词 / 答案），UTF-8 BOM，Excel 可直接打开。
 - **分布式模式** —— 多台机器运行 `worker.py` 从 Redis 队列抢"关键词批次"，结果推回 Redis，本地零落盘。
+- **内置管理后台** —— FastAPI + SQLite Web 界面：建任务、看进度、重跑失败、导出 CSV。
 - **崩溃恢复** —— worker 重启自动处理自己的遗留批次；心跳让管理后台的在线机器列表保持准确。
 
 ## 支持平台
@@ -82,6 +84,7 @@ scripts/
 ├── xiaohongshu.py
 └── export_csv.py     # 按天汇总导出 CSV
 worker.py             # 分布式 worker 入口（Redis 队列 → 采集 → 上报 Redis）
+admin/                # 内置管理后台（FastAPI + SQLite + Redis）
 worker_config.example.py  # 配置模板 —— 复制为 worker_config.py 后填写（已 gitignore）
 references/           # 各平台 DOM/踩坑记录（维护用文档）
 data/                 # 采集结果，按天分目录（已 gitignore）
@@ -160,17 +163,18 @@ python scripts/search.py --keywords "关键词" --wait-rounds 90 --round-secs 3 
 
 ## 分布式采集模式（多机并行）
 
-在每台爬虫电脑上运行根目录 `worker.py`（项目入口），从 Redis 队列抢"关键词批次"并行采集，由管理后台（如拥有队列的 flasky 后台）统一调度：
+在每台爬虫电脑上运行根目录 `worker.py`（项目入口），从 Redis 队列抢"关键词批次"并行采集；内置**管理后台**（`admin/`）负责建队、跟踪进度并持久化结果：
 
 ```bash
-python worker.py
+python worker.py            # 每台爬虫电脑上运行
+python -m admin.main        # 管理后台（一个实例即可）
 ```
 
 **配置** —— 全部写在根目录 `worker_config.py`（从 `worker_config.example.py` 复制；真实配置文件已被 gitignore，**切勿提交**）：
 
 | 配置 | 说明 | 默认值 |
 |---|---|---|
-| `REDIS_URL` | Redis 连接串（必填） | — |
+| `REDIS_URL` | Redis 连接串（必填，worker 与管理后台共用） | — |
 | `WORKER_ID` | 本机 worker 标识 | 主机名-随机后缀 |
 | `WAIT_ROUNDS` | 单次采集最长等待轮数 | 60 |
 | `ROUND_SECS` | 每轮等待秒数 | 3 |
@@ -182,8 +186,39 @@ MCP token 仍用环境变量 `PLAYWRIGHT_MCP_EXTENSION_TOKEN`；worker 模式不
 
 - 批次内仍按 关键词 → 平台 串行、单连接 + 每平台常驻 tab。
 - **分布式模式零本地落盘**（`base.ENABLE_LOCAL_SAVE = False`）：不写 json/md/png，判重以 Redis 全局集合为准（当天同平台同关键词全网只采一次）。
-- 结果推入 Redis 结果队列，由管理后台消费者落 SQL Server。
+- 结果推入 Redis 结果队列，由管理后台内置消费者落 **SQLite**。
 - 心跳（60s 过期）提供在线机器列表；worker 重启时自动处理自己的遗留批次；后台可"重新入队"兜底卡单。
+
+## 管理后台
+
+内置管理后台（`admin/`，FastAPI + SQLite + Redis）提供 Web 界面编排分布式采集，无需外部后台：
+
+```
+admin/
+├── main.py          # FastAPI 应用：REST API + 静态页面
+├── database.py      # SQLite 数据层（任务 / 单元）
+├── redis_client.py  # Redis 队列 / 心跳 / 判重访问
+├── consumer.py      # 后台消费者：结果队列 -> SQLite
+└── templates/
+    └── index.html   # 单页 Web 界面
+```
+
+**功能**
+
+- **建任务** —— 粘贴关键词（每行一个）、选择平台（默认全部）；单元切分为批次入 Redis 队列，等 worker 领取采集。
+- **进度跟踪** —— 任务与单元维度实时状态（pending / ok / failed / blocked / skipped）。
+- **在线 worker** —— 从 Redis 心跳实时读取机器列表。
+- **重跑失败** —— 把全部 failed/blocked 单元重置并重新入队；也可单个单元重排。
+- **CSV 导出** —— 下载某任务全部成功单元为 UTF-8 BOM CSV。
+
+**启动**
+
+```bash
+pip install -r requirements.txt
+python -m admin.main            # 或 uvicorn admin.main:app --host 0.0.0.0 --port 8000
+```
+
+然后访问 <http://localhost:8000>。后台从 `worker_config.py`（或 `REDIS_URL` 环境变量）读取 Redis 地址；未配置 Redis 时仍可启动并浏览任务，但队列/worker/建任务接口会返回明确提示。
 
 ## 按天汇总导出 CSV
 

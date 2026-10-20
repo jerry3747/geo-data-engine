@@ -340,6 +340,10 @@ async def run(keyword, wait_rounds=60, round_secs=3, screenshot=False, client=No
             except Exception:
                 pass
             try:
+                await client.close_extension_tabs()
+            except Exception:
+                pass
+            try:
                 await client.disconnect()
             except Exception:
                 pass

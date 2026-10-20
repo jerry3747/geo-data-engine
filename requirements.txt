@@ -1,2 +1,4 @@
 redis==4.5.5
 mcp==1.27.0
+fastapi==0.115.6
+uvicorn==0.34.0

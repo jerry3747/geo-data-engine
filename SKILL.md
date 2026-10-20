@@ -1,11 +1,11 @@
 ---
-name: ai-search-crawler
-description: 多平台 AI 搜索爬虫（豆包/DeepSeek/Kimi/千问/秘塔/元宝/小红书网页版）。用户提供关键词列表时，按"关键词→平台"顺序批量采集：每个关键词依次轮询完所有平台后再进入下一个关键词，当天已采集过的（关键词+平台）自动跳过、只补未采集的；也保留单平台单关键词单独采集。结果保存到 data/<日期>/<平台>/ 下的 JSON/Markdown，可一键按天汇总导出 CSV（平台名称/关键词/答案）。触发：用户要求"爬取豆包/DeepSeek/Kimi/千问/秘塔/元宝/小红书的搜索结果""AI 平台搜索""批量问 AI 搜索关键词""按关键词列表采集"等。
+name: geo-data-engine
+description: Geo 数据引擎（多平台 AI 数据采集，豆包/DeepSeek/Kimi/千问/秘塔/元宝/小红书网页版）。用户提供关键词列表时，按"关键词→平台"顺序批量采集：每个关键词依次轮询完所有平台后再进入下一个关键词，当天已采集过的（关键词+平台）自动跳过、只补未采集的；也保留单平台单关键词单独采集。结果保存到 data/<日期>/<平台>/ 下的 JSON/Markdown，可一键按天汇总导出 CSV（平台名称/关键词/答案）。触发：用户要求"爬取豆包/DeepSeek/Kimi/千问/秘塔/元宝/小红书的搜索结果""AI 平台搜索""批量问 AI 搜索关键词""按关键词列表采集"等。
 ---
 
-# AI 搜索爬虫（多平台）
+# geo-data-engine（Geo 数据引擎）
 
-从七大 AI 平台**网页版**获取搜索/问答结果：用户给关键词，爬虫在真实登录态下发起新会话提问，抽取回答与引用，落盘到 `data/`。
+从七大 AI 平台**网页版**获取搜索/问答结果：用户给关键词，数据引擎在真实登录态下发起新会话提问，抽取回答与引用，落盘到 `data/`。
 
 | 平台 | 脚本 | 状态 |
 |---|---|---|
@@ -48,18 +48,19 @@ python scripts/search.py --platform doubao --keyword "关键词"
 python scripts/search.py --keywords "关键词" --wait-rounds 90 --round-secs 3 --screenshot
 ```
 
-## 分布式采集模式（多台电脑并行，配合 flasky 管理后台）
+## 分布式采集模式（多台电脑并行，配合内置管理后台）
 
-在每台爬虫电脑上运行项目根目录的 `worker.py`（项目入口），从 Redis 队列抢"关键词批次"并行采集：
+在每台爬虫电脑上运行项目根目录的 `worker.py`（项目入口），从 Redis 队列抢"关键词批次"并行采集；内置管理后台 `admin/` 负责建队、跟踪进度并持久化结果：
 
 ```bash
-python worker.py
+python worker.py            # 每台爬虫电脑上运行
+python -m admin.main        # 管理后台（一个实例即可，默认 8000 端口）
 ```
 
 - 配置：全部写在根目录 `worker_config.py`（参考根目录 `worker_config.example.py`）：`REDIS_URL` / `WORKER_ID` / `WAIT_ROUNDS` / `ROUND_SECS` / `POLL_TIMEOUT`，不支持命令行传参；MCP token 仍用环境变量 `PLAYWRIGHT_MCP_EXTENSION_TOKEN`
-- 行为：批次内仍按 关键词→平台 串行、单连接 + 每平台常驻 tab；任务由 flasky 后台在 Redis 建队，结果消息推 Redis，由 flasky 消费者落 SQL Server
+- 行为：批次内仍按 关键词→平台 串行、单连接 + 每平台常驻 tab；任务由管理后台在 Redis 建队，结果消息推 Redis，由后台内置消费者落 SQLite
 - **分布式模式零本地落盘**（`base.ENABLE_LOCAL_SAVE=False`）：不写 json/md/png，判重以 Redis 全局集合为准（当天同平台同关键词全网只采一次，成功即标记）
-- 管理后台在 flasky 的 `/ai-search`：建任务、看整体进度、导出 CSV/XLSX、重跑失败、重新入队未完成单元；在线机器列表由 worker 心跳（60s 过期）提供
+- 管理后台 `admin/`（FastAPI + SQLite）：建任务、看整体进度、导出 CSV、重跑失败、重新入队未完成单元；在线机器列表由 worker 心跳（60s 过期）提供
 - worker 崩溃恢复：重启时自动处理自己 `ai_search:processing:<worker_id>` 里的遗留批次；后台"重新入队"可兜底卡单
 
 ### 按天汇总导出 CSV

@@ -62,3 +62,10 @@ data/
 *.png
 *.xlsx
 *.csv
+
+# Admin dashboard runtime data (SQLite database)
+admin.db
+admin.db-journal
+admin.db-wal
+admin.db-shm
+.workbuddy/

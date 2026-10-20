@@ -9,9 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - Initial open-source release.
-- Multi-platform AI search crawler for 7 platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) via their web UIs.
+- Multi-platform AI data collection engine for 7 platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) via their web UIs.
 - Batch mode with keyword-first ordering and daily `(keyword, platform)` deduplication.
-- Single MCP connection with one resident tab per platform.
+- Single MCP connection with one resident tab per platform; closes the leftover Playwright MCP extension welcome tab after a run.
 - Daily CSV export (`scripts/export_csv.py`), UTF-8 BOM.
 - Distributed worker mode (`worker.py`) with Redis queue, global dedup, heartbeats and crash recovery.
+- Built-in management dashboard (`admin/`, FastAPI + SQLite + Redis): create tasks, track progress, list online workers, rerun failures, re-enqueue single units, export CSV.
 - Bilingual documentation (`README.md` / `README.zh-CN.md`), MIT license, contributing and security guidelines.

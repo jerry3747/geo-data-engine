@@ -1,8 +1,8 @@
-# AI Search Crawler
+# geo-data-engine
 
 <div align="center">
 
-**Multi-platform AI search crawler** — collect answers from 7 AI platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) through their **web UIs**, with a Redis-based **distributed worker** mode.
+**Geo Data Engine** — a multi-platform AI data engine that collects search/Q&A answers from 7 AI platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) through their **web UIs**, with a Redis-based **distributed worker** mode and a built-in **FastAPI + SQLite** management dashboard.
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -19,6 +19,7 @@
 - [Quick Start](#quick-start)
 - [Usage](#usage)
 - [Distributed Mode (Multi-Machine)](#distributed-mode-multi-machine)
+- [Management Dashboard](#management-dashboard)
 - [Export Results to CSV](#export-results-to-csv)
 - [Output Structure](#output-structure)
 - [Extending to a New Platform](#extending-to-a-new-platform)
@@ -36,6 +37,7 @@
 - **Rate-limit aware** — detects captcha / rate limiting / busy states, skips automatic retries and aborts the rest of the batch for that platform.
 - **Daily CSV export** — one-click aggregation of all successful results per day (platform / keyword / answer), UTF-8 BOM so Excel opens it directly.
 - **Distributed mode** — run `worker.py` on multiple machines, grab keyword batches from a Redis queue, push results back to Redis; no local file writes.
+- **Built-in management dashboard** — FastAPI + SQLite web UI for creating tasks, tracking progress, rerunning failures and exporting CSV.
 - **Crash recovery** — workers automatically reprocess their leftover batches on restart; heartbeats keep the management UI online.
 
 ## Supported Platforms
@@ -82,6 +84,7 @@ scripts/
 ├── xiaohongshu.py
 └── export_csv.py     # Daily aggregation to CSV
 worker.py             # Distributed worker entry (Redis queue → crawl → report to Redis)
+admin/                # Built-in management dashboard (FastAPI + SQLite + Redis)
 worker_config.example.py  # Config template — copy to worker_config.py (gitignored)
 references/           # Per-platform DOM / pitfall notes (maintenance docs)
 data/                 # Crawled results, one directory per day (gitignored)
@@ -160,17 +163,18 @@ python scripts/search.py --keywords "keyword" --wait-rounds 90 --round-secs 3 --
 
 ## Distributed Mode (Multi-Machine)
 
-Run `worker.py` on every crawler machine — workers pull keyword batches from a Redis queue and crawl in parallel, coordinated by a management dashboard (e.g. the flasky backend that owns the queue):
+Run `worker.py` on every crawler machine — workers pull keyword batches from a Redis queue and crawl in parallel. The built-in **management dashboard** (`admin/`) owns the queue, tracks progress and persists results:
 
 ```bash
-python worker.py
+python worker.py            # on every crawler machine
+python -m admin.main        # the management dashboard (one instance)
 ```
 
 **Configuration** — everything is read from `worker_config.py` at the project root (copy it from `worker_config.example.py`; the real file is gitignored and must never be committed):
 
 | Config | Description | Default |
 |---|---|---|
-| `REDIS_URL` | Redis connection string (required) | — |
+| `REDIS_URL` | Redis connection string (required, shared by worker & admin) | — |
 | `WORKER_ID` | Unique worker id for this machine | hostname-random |
 | `WAIT_ROUNDS` | Max waiting rounds per collection | `60` |
 | `ROUND_SECS` | Seconds per round | `3` |
@@ -182,8 +186,39 @@ The MCP token still comes from the environment variable `PLAYWRIGHT_MCP_EXTENSIO
 
 - Within a batch, execution is still keyword → platform serial, with a single connection and one resident tab per platform.
 - **Zero local writes in distributed mode** (`base.ENABLE_LOCAL_SAVE = False`): no json/md/png files; deduplication is based on a Redis global set (each `(platform, keyword)` is collected once per day across all machines).
-- Results are pushed to the Redis result queue and persisted to SQL Server by the management dashboard's consumer.
+- Results are pushed to the Redis result queue and persisted to **SQLite** by the admin's built-in consumer.
 - Heartbeats (60s expiry) feed the online-machine list; workers handle their leftover batches on restart; the dashboard can re-queue stuck units.
+
+## Management Dashboard
+
+The built-in dashboard (`admin/`, FastAPI + SQLite + Redis) gives you a web UI to orchestrate distributed collection — no external backend required:
+
+```
+admin/
+├── main.py          # FastAPI app: REST API + static UI
+├── database.py      # SQLite layer (tasks / units)
+├── redis_client.py  # Redis queue / heartbeat / dedup access
+├── consumer.py      # background consumer: result queue -> SQLite
+└── templates/
+    └── index.html   # single-page web UI
+```
+
+**Features**
+
+- **Create tasks** — paste keywords (one per line) and pick platforms (default all); units are split into batches and enqueued to Redis, waiting for workers to pick them up.
+- **Progress tracking** — per-task and per-unit status (pending / ok / failed / blocked / skipped), real-time.
+- **Online workers** — live machine list from Redis heartbeats.
+- **Rerun failures** — reset all failed/blocked units and re-enqueue them; or re-enqueue a single unit.
+- **CSV export** — download all successful units of a task as a UTF-8 BOM CSV.
+
+**Start**
+
+```bash
+pip install -r requirements.txt
+python -m admin.main            # or: uvicorn admin.main:app --host 0.0.0.0 --port 8000
+```
+
+Then open <http://localhost:8000>. The dashboard reads `REDIS_URL` from `worker_config.py` (or the `REDIS_URL` env var); without Redis it still starts and you can browse tasks, but queue/worker/creation endpoints return a clear message.
 
 ## Export Results to CSV
 

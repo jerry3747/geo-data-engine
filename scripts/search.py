@@ -151,6 +151,18 @@ async def close_platform_tabs(client, tab_indices):
             pass
 
 
+async def close_extension_relay_tabs(client):
+    """关闭 Playwright MCP 扩展自带的 relay/欢迎页（chrome-extension:// 开头的 tab）。
+
+    关闭全部常驻 tab 后，扩展会留下一个空白欢迎页（页面显示 "mcp connected."）。
+    复用 base.PlaywrightMCP.close_extension_tabs 实现：列出所有 tab、识别扩展页并
+    按索引倒序关闭，不影响普通网页 tab。"""
+    try:
+        await client.close_extension_tabs()
+    except Exception:
+        pass
+
+
 async def collect_platform(client, platform, keyword, wait_rounds, round_secs, screenshot):
     mod = importlib.import_module(PLATFORMS[platform])
     # 全平台通用：采集前先关掉非验证码弹窗（会员/升级/通知等），
@@ -244,6 +256,8 @@ async def run_batch_async(keywords, platforms, wait_rounds, round_secs, screensh
                 emit(platform, kw, result)
     finally:
         await close_platform_tabs(client, tab_indices)
+        # 关闭扩展残留的 relay/欢迎页（mcp connected），避免留下多余 tab
+        await close_extension_relay_tabs(client)
         try:
             await client.disconnect()
         except Exception:
