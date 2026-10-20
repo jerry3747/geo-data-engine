@@ -21,6 +21,13 @@
   label { display:block; font-size:13px; color:var(--muted); margin:10px 0 4px; }
   textarea, input, select { width:100%; background:#12141a; border:1px solid var(--border);
     color:var(--text); border-radius:6px; padding:8px 10px; font-size:14px; }
+  .chk { display:flex; flex-wrap:wrap; gap:8px; }
+  .chk label { display:inline-flex; align-items:center; gap:6px; margin:0; padding:6px 12px;
+    background:#12141a; border:1px solid var(--border); border-radius:20px; cursor:pointer;
+    font-size:13px; color:var(--text); }
+  .chk input { width:auto; margin:0; accent-color:var(--accent); cursor:pointer; }
+  .chk label.on { border-color:var(--accent); background:rgba(76,141,255,.12); }
+  .hint { color:var(--muted); font-size:12px; margin-top:4px; }
   button { background:var(--accent); color:#fff; border:none; border-radius:6px;
     padding:9px 16px; font-size:14px; cursor:pointer; margin-top:12px; }
   button:hover { opacity:.9; }
@@ -60,12 +67,29 @@
   <h2>新建采集任务</h2>
   <label>关键词（每行一个）</label>
   <textarea id="kw-input" rows="4" placeholder="演唱会带什么装备最实用&#10;2026 年 AI 趋势"></textarea>
-  <label>平台（留空 = 全部；逗号分隔）</label>
-  <input id="platform-input" placeholder="doubao,deepseek,kimi,qwen,metaso,yuanbao,xiaohongshu">
+  <label>平台（默认全部；勾选后只采集勾选的平台）</label>
+  <div class="chk" id="platform-chks"></div>
+  <div class="hint" style="margin-top:6px;">
+    <a href="javascript:void(0)" onclick="checkAll(true)">全选</a> ·
+    <a href="javascript:void(0)" onclick="checkAll(false)">全不选</a>
+    （全不选 = 采集全部平台）
+  </div>
   <div class="row">
-    <div><label>等待轮数 wait_rounds</label><input id="wait-rounds" type="number" value="60"></div>
-    <div><label>每轮秒数 round_secs</label><input id="round-secs" type="number" value="0.1" step="0.1"></div>
-    <div><label>每批单元数 chunk_size</label><input id="chunk-size" type="number" value="8"></div>
+    <div>
+      <label>等待轮数 wait_rounds</label>
+      <input id="wait-rounds" type="number" value="60">
+      <div class="hint">单次采集最长等待轮数，超过则判定失败（默认 60）</div>
+    </div>
+    <div>
+      <label>每轮秒数 round_secs</label>
+      <input id="round-secs" type="number" value="0.1" step="0.1">
+      <div class="hint">每轮等待间隔秒数，越小越快但更容易触发风控（默认 0.1）</div>
+    </div>
+    <div>
+      <label>每批单元数 chunk_size</label>
+      <input id="chunk-size" type="number" value="8">
+      <div class="hint">每个 Redis 批次包含的（关键词×平台）单元数（默认 8）</div>
+    </div>
   </div>
   <button onclick="createTask()">创建任务并入队</button>
   <div class="err" id="create-msg"></div>
@@ -105,6 +129,44 @@
 
 <script>
 let currentTask = null;
+const PLATFORMS = [
+  { key: 'doubao',       name: '豆包' },
+  { key: 'deepseek',     name: 'DeepSeek' },
+  { key: 'kimi',         name: 'Kimi' },
+  { key: 'qwen',         name: '千问' },
+  { key: 'metaso',       name: '秘塔' },
+  { key: 'yuanbao',      name: '元宝' },
+  { key: 'xiaohongshu',  name: '小红书' },
+];
+
+function renderPlatformChks() {
+  const box = document.getElementById('platform-chks');
+  box.innerHTML = PLATFORMS.map(p => `
+    <label id="chk-${p.key}"><input type="checkbox" value="${p.key}" onchange="onChk('${p.key}')"> ${p.name}</label>
+  `).join('');
+}
+function onChk(key) {
+  const lab = document.getElementById('chk-' + key);
+  if (lab) lab.classList.toggle('on', lab.querySelector('input').checked);
+}
+function checkAll(on) {
+  PLATFORMS.forEach(p => {
+    const lab = document.getElementById('chk-' + p.key);
+    if (!lab) return;
+    const cb = lab.querySelector('input');
+    cb.checked = on;
+    lab.classList.toggle('on', on);
+  });
+}
+function getCheckedPlatforms() {
+  const checked = PLATFORMS
+    .map(p => document.getElementById('chk-' + p.key))
+    .filter(lab => lab && lab.querySelector('input').checked)
+    .map(lab => lab.querySelector('input').value);
+  return checked.length ? checked : null;   // 全不选 = 全部平台
+}
+
+renderPlatformChks();
 
 async function api(path, opts) {
   const res = await fetch(path, opts);
@@ -180,11 +242,11 @@ async function createTask() {
   el.textContent = '';
   const keywords = document.getElementById('kw-input').value.split('\n').map(s=>s.trim()).filter(Boolean);
   if (!keywords.length) { el.textContent = '请填写至少一个关键词'; return; }
-  const platforms = document.getElementById('platform-input').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const platforms = getCheckedPlatforms();   // 全不选 => null => 全部平台
   try {
     const body = {
       keywords,
-      platforms: platforms.length ? platforms : null,
+      platforms: platforms,   // null 表示全部
       wait_rounds: parseInt(document.getElementById('wait-rounds').value) || 60,
       round_secs: parseFloat(document.getElementById('round-secs').value) || 0.1,
       chunk_size: parseInt(document.getElementById('chunk-size').value) || 8,

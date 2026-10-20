@@ -29,7 +29,7 @@
 - Redis 队列/心跳/判重 key 必须与 `worker.py` 严格对齐（见 `admin/redis_client.py` 顶部注释）；
 - SQLite 表结构变更需在 `admin/database.py` 的 `SCHEMA` 中同步（表由启动时 `init_db()` 自动创建）；
 - Web UI 是 `admin/templates/index.html` 原生单页，新增功能需同时提供 API 与页面交互；
-- 运行：`python -m admin.main`（默认 8000 端口）。
+- 运行：`python -m admin.main`（默认 8843 端口）。
 
 ## 代码规范
 

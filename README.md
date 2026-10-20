@@ -206,20 +206,30 @@ admin/
 
 **Features**
 
-- **Create tasks** — paste keywords (one per line) and pick platforms (default all); units are split into batches and enqueued to Redis, waiting for workers to pick them up.
+- **Create tasks** — paste keywords (one per line) and tick the platforms to collect (default: all if none ticked); units are split into batches and enqueued to Redis, waiting for workers to pick them up.
 - **Progress tracking** — per-task and per-unit status (pending / ok / failed / blocked / skipped), real-time.
 - **Online workers** — live machine list from Redis heartbeats.
 - **Rerun failures** — reset all failed/blocked units and re-enqueue them; or re-enqueue a single unit.
 - **CSV export** — download all successful units of a task as a UTF-8 BOM CSV.
 
+**Collection parameters**
+
+When creating a task you can tune how the crawl behaves:
+
+| Parameter | Meaning | Default |
+|---|---|---|
+| `wait_rounds` | Max polling rounds while waiting for a single answer. If the answer is not finished within `wait_rounds × round_secs` seconds, the unit is marked **failed** (timeout). | `60` |
+| `round_secs` | Seconds between two polling checks. Lower = faster detection of a finished answer, but more frequent DOM polling (higher risk of triggering rate limits). | `0.1` |
+| `chunk_size` | How many `(keyword, platform)` units are packed into one Redis batch. A worker grabs one batch at a time; smaller batches give finer progress/failure granularity and better load balancing, larger batches reduce queue traffic. | `8` |
+
 **Start**
 
 ```bash
 pip install -r requirements.txt
-python -m admin.main            # or: uvicorn admin.main:app --host 0.0.0.0 --port 8000
+python -m admin.main            # or: uvicorn admin.main:app --host 0.0.0.0 --port 8843
 ```
 
-Then open <http://localhost:8000>. The dashboard reads `REDIS_URL` from `worker_config.py` (or the `REDIS_URL` env var); without Redis it still starts and you can browse tasks, but queue/worker/creation endpoints return a clear message.
+Then open <http://localhost:8843>. The dashboard reads `REDIS_URL` from `worker_config.py` (or the `REDIS_URL` env var); without Redis it still starts and you can browse tasks, but queue/worker/creation endpoints return a clear message.
 
 ## Export Results to CSV
 

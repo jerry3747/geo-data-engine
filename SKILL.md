@@ -54,7 +54,7 @@ python scripts/search.py --keywords "关键词" --wait-rounds 90 --round-secs 3 
 
 ```bash
 python worker.py            # 每台爬虫电脑上运行
-python -m admin.main        # 管理后台（一个实例即可，默认 8000 端口）
+python -m admin.main        # 管理后台（一个实例即可，默认 8843 端口）
 ```
 
 - 配置：全部写在根目录 `worker_config.py`（参考根目录 `worker_config.example.py`）：`REDIS_URL` / `WORKER_ID` / `WAIT_ROUNDS` / `ROUND_SECS` / `POLL_TIMEOUT`，不支持命令行传参；MCP token 仍用环境变量 `PLAYWRIGHT_MCP_EXTENSION_TOKEN`

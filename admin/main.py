@@ -10,7 +10,7 @@
   - 简易 Web UI
 
 启动：
-  python -m admin.main            # 或 uvicorn admin.main:app --host 0.0.0.0 --port 8000
+  python -m admin.main            # 或 uvicorn admin.main:app --host 0.0.0.0 --port 8843
 配置：读取根目录 worker_config.py 的 REDIS_URL（与 worker 共用）。
 """
 import csv
@@ -264,4 +264,4 @@ def _csv_response(rows, filename):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("admin.main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("admin.main:app", host="0.0.0.0", port=8843, reload=False)

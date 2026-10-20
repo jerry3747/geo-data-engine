@@ -206,20 +206,30 @@ admin/
 
 **功能**
 
-- **建任务** —— 粘贴关键词（每行一个）、选择平台（默认全部）；单元切分为批次入 Redis 队列，等 worker 领取采集。
+- **建任务** —— 粘贴关键词（每行一个）、**勾选**要采集的平台（不勾选 = 全部平台）；单元切分为批次入 Redis 队列，等 worker 领取采集。
 - **进度跟踪** —— 任务与单元维度实时状态（pending / ok / failed / blocked / skipped）。
 - **在线 worker** —— 从 Redis 心跳实时读取机器列表。
 - **重跑失败** —— 把全部 failed/blocked 单元重置并重新入队；也可单个单元重排。
 - **CSV 导出** —— 下载某任务全部成功单元为 UTF-8 BOM CSV。
 
+**采集参数说明**
+
+建任务时可调整采集行为：
+
+| 参数 | 含义 | 默认值 |
+|---|---|---|
+| `wait_rounds` | 单次采集**最长等待轮数**。回答在 `wait_rounds × round_secs` 秒内未生成完毕，该单元判为 **failed（超时）**。 | 60 |
+| `round_secs` | **每轮等待秒数**，即两次轮询检查的间隔。越小越快感知回答完成，但 DOM 轮询更频繁，更易触发平台风控。 | 0.1 |
+| `chunk_size` | **每批单元数**，即每个 Redis 批次打包多少个（关键词×平台）单元。worker 一次领取一个批次；批次越小，进度/失败粒度越细、负载越均衡，批次越大则队列流量更少。 | 8 |
+
 **启动**
 
 ```bash
 pip install -r requirements.txt
-python -m admin.main            # 或 uvicorn admin.main:app --host 0.0.0.0 --port 8000
+python -m admin.main            # 或 uvicorn admin.main:app --host 0.0.0.0 --port 8843
 ```
 
-然后访问 <http://localhost:8000>。后台从 `worker_config.py`（或 `REDIS_URL` 环境变量）读取 Redis 地址；未配置 Redis 时仍可启动并浏览任务，但队列/worker/建任务接口会返回明确提示。
+然后访问 <http://localhost:8843>。后台从 `worker_config.py`（或 `REDIS_URL` 环境变量）读取 Redis 地址；未配置 Redis 时仍可启动并浏览任务，但队列/worker/建任务接口会返回明确提示。
 
 ## 按天汇总导出 CSV
 
