@@ -110,7 +110,7 @@ data/                 # Crawled results, one directory per day (gitignored)
 
 ## Quick Start
 
-> **Prerequisites:** Python 3.10+, Chrome with the [Playwright MCP extension](https://github.com/microsoft/playwright-mcp) installed, and the target platforms logged in.
+> **Prerequisites:** Python 3.10+, Chrome with the [Playwright MCP extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) installed, and the target platforms logged in.
 
 ```bash
 # 1. Install dependencies
@@ -127,6 +127,7 @@ python scripts/search.py --keywords "keyword1,keyword2"
 ```
 
 > The extension token is read from the environment variable `PLAYWRIGHT_MCP_EXTENSION_TOKEN`.
+> **Install the extension:** [Playwright Extension — Chrome Web Store](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) (the MCP relay token is shown on the extension's popup page after installation).
 > By default the project uses a locally cached `@playwright/mcp` binary; set `PLAYWRIGHT_MCP_BIN` to override (otherwise it falls back to `npx @playwright/mcp@latest --extension`).
 > Use `python` on Windows and `python3` on macOS/Linux.
 

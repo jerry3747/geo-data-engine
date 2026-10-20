@@ -110,7 +110,7 @@ data/                 # 采集结果，按天分目录（已 gitignore）
 
 ## 快速开始
 
-> **前置条件：** Python 3.10+；已安装 [Playwright MCP 扩展](https://github.com/microsoft/playwright-mcp) 的 Chrome；目标平台已登录。
+> **前置条件：** Python 3.10+；已安装 [Playwright MCP 扩展](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm) 的 Chrome；目标平台已登录。
 
 ```bash
 # 1. 安装依赖
@@ -127,6 +127,7 @@ python scripts/search.py --keywords "关键词1,关键词2"
 ```
 
 > 扩展 token 从环境变量 `PLAYWRIGHT_MCP_EXTENSION_TOKEN` 读取。
+> **安装扩展：** [Playwright 扩展 — Chrome 应用商店](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm)（安装后扩展弹窗页会显示 MCP relay token）。
 > 默认使用本地缓存的 `@playwright/mcp`；可用 `PLAYWRIGHT_MCP_BIN` 覆盖（不设置则回退 `npx @playwright/mcp@latest --extension`）。
 > Windows 用 `python`，macOS/Linux 用 `python3`。
 
