@@ -1,6 +1,6 @@
-# geo-data-engine
-
 <div align="center">
+
+# geo-data-engine
 
 **Geo Data Engine** — a multi-platform AI data engine that collects search/Q&A answers from 7 AI platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) through their **web UIs**, with a Redis-based **distributed worker** mode and a built-in **FastAPI + SQLite** management dashboard.
 

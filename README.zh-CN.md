@@ -1,6 +1,6 @@
-# geo-data-engine（Geo 数据引擎）
-
 <div align="center">
+
+# geo-data-engine（Geo 数据引擎）
 
 **Geo 数据引擎** —— 通过 **网页版** 从 7 个 AI 平台（豆包 / DeepSeek / Kimi / 千问 / 秘塔 / 元宝 / 小红书）采集搜索/问答结果，支持基于 Redis 的**分布式多机并行采集**，并内置 **FastAPI + SQLite 管理后台**。
 
