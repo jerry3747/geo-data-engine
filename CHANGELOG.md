@@ -15,4 +15,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Daily CSV export (`scripts/export_csv.py`), UTF-8 BOM.
 - Distributed worker mode (`worker.py`) with Redis queue, global dedup, heartbeats and crash recovery.
 - Built-in management dashboard (`admin/`, FastAPI + SQLite + Redis): create tasks, track progress, list online workers, rerun failures, re-enqueue single units, export CSV.
-- Bilingual documentation (`README.md` / `README.zh-CN.md`), MIT license, contributing and security guidelines.
+- Bilingual documentation (`README.md` / `README.en.md`), MIT license, contributing and security guidelines.
