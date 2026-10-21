@@ -2,7 +2,7 @@
 
 # 🌍 geo-data-engine（Geo 数据引擎）
 
-**Geo 数据引擎** —— 通过 **网页版** 从 7 个 AI 平台（豆包 / DeepSeek / Kimi / 千问 / 秘塔 / 元宝 / 小红书）采集搜索/问答结果，支持基于 Redis 的**分布式多机并行采集**，并内置 **FastAPI + SQLite 管理后台**。
+**Geo 数据引擎** —— **多平台 AI 搜索爬虫 / AI 搜索结果采集工具**。通过 **网页版** 从 7 个主流 AI 平台（豆包 Doubao / DeepSeek / Kimi / 千问 Qwen / 秘塔 Metaso / 腾讯元宝 Yuanbao / 小红书 Xiaohongshu）**批量采集 AI 搜索问答、答案与引用链接**，支持**关键词批量查询、按天自动去重、CSV 导出**，并内置基于 Redis 的**分布式多机并行采集**与 **FastAPI + SQLite 管理后台**。
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)
@@ -12,6 +12,8 @@
 [English](README.en.md) · [简体中文](README.md)
 
 </div>
+
+**关键词：** AI搜索 · AI搜索爬虫 · AI 搜索结果采集 · 网页爬虫 · 多平台爬虫 · 搜索聚合 · 豆包 · DeepSeek · Kimi · 千问 · 秘塔 · 元宝 · 小红书 · Playwright MCP · 分布式采集 · Redis · FastAPI · SQLite · CSV 导出
 
 ---
 

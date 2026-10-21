@@ -2,7 +2,7 @@
 
 # 🌍 geo-data-engine
 
-**Geo Data Engine** — a multi-platform AI data engine that collects search/Q&A answers from 7 AI platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) through their **web UIs**, with a Redis-based **distributed worker** mode and a built-in **FastAPI + SQLite** management dashboard.
+**Geo Data Engine** — a **multi-platform AI search scraper / crawler** that collects **AI search results, Q&A answers and reference links** from 7 major AI platforms (Doubao / DeepSeek / Kimi / Qwen / Metaso / Yuanbao / Xiaohongshu) through their **web UIs**. Supports **batch keyword queries, per-day deduplication, CSV export**, a Redis-based **distributed multi-machine crawler** mode and a built-in **FastAPI + SQLite** management dashboard.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue?logo=python&logoColor=white)
@@ -12,6 +12,8 @@
 [English](README.en.md) · [简体中文](README.md)
 
 </div>
+
+**Keywords:** AI search · AI search crawler · web scraping · web crawler · multi-platform scraper · search aggregator · Doubao · DeepSeek · Kimi · Qwen · Metaso · Yuanbao · Xiaohongshu · Playwright MCP · distributed crawling · Redis · FastAPI · SQLite · CSV export
 
 ---
 
