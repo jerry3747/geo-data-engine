@@ -58,6 +58,15 @@ def write_report(rows: list[Any], config: Any, path: str | Path) -> Path:
         groups = sorted(groups, key=batch_sort_key)
         for before, after in zip(groups, groups[1:]):
             lines.append(f"|{source}|{provider}|{before['batch_id']}|{after['batch_id']}|{delta(before['brand_mention_rate'], after['brand_mention_rate'])}|{delta(before['explicit_recommendation_rate'], after['explicit_recommendation_rate'])}|{delta(before['partner_article_citation_rate'], after['partner_article_citation_rate'])}|")
+    lines += ["", "## 竞品批次变化（观察）", "", "|来源|提供方|竞品|前批次|后批次|提及率变化|明确推荐率变化|", "|---|---|---|---|---|---:|---:|"]
+    for (source, provider), groups in by_key.items():
+        groups = sorted(groups, key=batch_sort_key)
+        for before, after in zip(groups, groups[1:]):
+            names = set(before["competitors"]) | set(after["competitors"])
+            for comp in sorted(names):
+                old = before["competitors"].get(comp, {})
+                new = after["competitors"].get(comp, {})
+                lines.append(f"|{source}|{provider}|{comp}|{before['batch_id']}|{after['batch_id']}|{delta(old.get('mention_rate'), new.get('mention_rate'))}|{delta(old.get('recommendation_rate'), new.get('recommendation_rate'))}|")
     lines += ["", "## 解释与限制", "", "- 每个问题的重复采样都会使用新浏览器会话；批次和采样编号保存在样本记录中，历史记录不会被覆盖。", "- 失败、登录未完成、页面结构变化和空回答均单列；请优先检查截图和原始回答。", "- 这是有限问题集、有限时间和有限会话下的观测，结果受账号状态、地域、模型版本、随机性、页面改版和引用展示策略影响。", "- 合作前后差异只能作为时间相关性证据，不能把全部变化直接归因于合作方；应结合同期投放、品牌活动、价格、竞品动作和问题集变化解释。", "- 引用率只统计回答中可提取且与配置 URL 匹配的链接，无法证明模型实际采纳了文章内容。", ""]
     path.write_text("\n".join(lines), encoding="utf-8")
     path.with_suffix(".summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
