@@ -72,25 +72,29 @@ class WebCollector:
                         except EOFError:
                             pass
                     else:
+                        raw_login = await page.locator("body").inner_text()
                         await page.screenshot(path=str(screenshot), full_page=True)
                         return CollectionResult("login_required", False, screenshot_path=str(screenshot),
+                                                raw_answer=raw_login,
                                                 error="检测到登录页；请使用 --headed --login-wait 后在浏览器完成登录",
                                                 mode_settings=mode)
                 await self._dismiss_overlays(page)
                 await self._submit(page, question)
                 await page.wait_for_timeout(int(self.config.get("settle_ms", 2500)))
-                text = await self._extract_answer(page, question)
+                raw_text, text = await self._extract_answer(page, question)
                 citations = await self._extract_links(page)
                 await page.screenshot(path=str(screenshot), full_page=True)
                 if not text.strip():
                     body_after = (await page.locator("body").inner_text()).lower()
                     if "登录" in body_after or "sign in" in body_after:
                         return CollectionResult("login_required", False, screenshot_path=str(screenshot),
+                                                raw_answer=raw_text,
                                                 error="提交后页面提示登录；请使用 --headed --login-wait 完成登录",
                                                 citations=citations, mode_settings=mode)
                     return CollectionResult("empty", False, screenshot_path=str(screenshot),
+                                            raw_answer=raw_text,
                                             error="页面未提取到回答文本", citations=citations, mode_settings=mode)
-                return CollectionResult("success", True, answer_text=text, raw_answer=text,
+                return CollectionResult("success", True, answer_text=text, raw_answer=raw_text,
                                         citations=citations, screenshot_path=str(screenshot), mode_settings=mode)
             finally:
                 try:
@@ -158,7 +162,7 @@ class WebCollector:
         except Exception:
             return
 
-    async def _extract_answer(self, page: Any, question: str) -> str:
+    async def _extract_answer(self, page: Any, question: str) -> tuple[str, str]:
         selectors = ["[data-testid*='message']", "[class*='markdown']", "article", "main"]
         chunks: list[str] = []
         for selector in selectors:
@@ -174,12 +178,13 @@ class WebCollector:
         if not chunks:
             chunks = [(await page.locator("body").inner_text()).strip()]
         text = "\n\n".join(chunks)
+        raw = text
         # 页面壳、输入框回显或登录提示不能算有效回答。
         cleaned = text.replace(question, "")
         for shell in ("新对话", "新工作任务", "AI 生成可能有误 请核实", "下载电脑版", "登录", "发送",
                       "有什么我能帮你的吗？", "对话", "工作", "快速", "最近", "项目", "API 服务", "更多"):
             cleaned = cleaned.replace(shell, "")
-        return cleaned.strip()
+        return raw, cleaned.strip()
 
     async def _extract_links(self, page: Any) -> list[dict[str, str]]:
         out = []
