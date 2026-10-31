@@ -1,0 +1,17 @@
+{
+  "brand": "我的品牌",
+  "aliases": ["品牌简称", "英文名"],
+  "competitors": ["竞品A", "竞品B"],
+  "questions": [
+    {"id": "q1", "text": "在这个领域，哪些品牌值得优先考虑？"},
+    {"id": "q2", "text": "如果预算有限，你会推荐哪些方案？"}
+  ],
+  "partner_articles": [
+    {"url": "https://example.com/article", "published_at": "2026-10-01", "title": "合作方文章"}
+  ],
+  "providers": {
+    "doubao": {"url": "https://www.doubao.com/chat/"},
+    "kimi": {"url": "https://kimi.moonshot.cn/"}
+  },
+  "sampling": {"samples_per_question": 3}
+}
