@@ -1,6 +1,6 @@
 # GEO Now（单机版）
 
-这是一个用于独立核验合作伙伴推广效果的本地 GEO 监测工具。第一阶段支持豆包和 Kimi 网页采集，并把每次回答、引用链接、时间、模式设置、截图和采集状态写入 SQLite；API 数据通过单独的导入入口保存为 `source=api`，报告会与网页数据分开统计。
+这是一个基于 [`jerry3747/geo-data-engine`](https://github.com/jerry3747/geo-data-engine) 采集思路改造、用于独立核验合作伙伴推广效果的本地 GEO 监测工具。第一阶段支持豆包和 Kimi 网页采集，并把每次回答、引用链接、时间、模式设置、截图和采集状态写入 SQLite；API 数据通过单独的导入入口保存为 `source=api`，报告会与网页数据分开统计。上游适配细节见 [`references/upstream.md`](references/upstream.md)。
 
 ## 快速开始
 
@@ -62,7 +62,7 @@ geonow report --config config.json --output reports/all
 
 ## Playwright MCP 兼容性
 
-`geonow doctor` 检查 Python Playwright 和 Chromium。若本机运行 Playwright MCP，可设置 `PLAYWRIGHT_MCP_URL=http://127.0.0.1:<port>`，工具会做本地健康连通性检查；采集核心使用公开的 Playwright Python API，因此不依赖某个 MCP 服务器的专有工具名。页面选择器改变时，保留失败样本和截图，便于调整提供方配置或选择器。
+`geonow doctor` 检查 Python Playwright、Chromium，以及上游使用的 `PLAYWRIGHT_MCP_EXTENSION_TOKEN` / `PLAYWRIGHT_MCP_BIN`；若本机运行 MCP 服务，还可设置 `PLAYWRIGHT_MCP_URL=http://127.0.0.1:<port>` 做本地健康连通性检查。采集核心使用公开的 Playwright Python API，因此不依赖某个 MCP 服务器的专有工具名。页面选择器改变时，保留失败样本和截图，便于调整提供方配置或选择器。
 
 ## 测试
 

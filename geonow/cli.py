@@ -123,7 +123,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def cmd_doctor(args: argparse.Namespace) -> int:
     result: dict[str, Any] = {"python": sys.version.split()[0], "playwright": False, "chromium": False,
-                              "mcp": {"configured": False, "reachable": False}}
+                              "mcp": {"configured": False, "reachable": False, "compatible": False}}
     try:
         import playwright  # type: ignore
         result["playwright"] = True
@@ -142,16 +142,23 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             result["chromium_error"] = str(exc)
     result["chromium"] = bool(browser_path)
     result["chromium_path"] = browser_path
-    mcp_url = __import__("os").environ.get("PLAYWRIGHT_MCP_URL")
-    if mcp_url:
+    import os
+    mcp_url = os.environ.get("PLAYWRIGHT_MCP_URL")
+    mcp_token = os.environ.get("PLAYWRIGHT_MCP_EXTENSION_TOKEN")
+    mcp_bin = os.environ.get("PLAYWRIGHT_MCP_BIN") or shutil.which("npx")
+    result["mcp"]["extension_token_present"] = bool(mcp_token)
+    result["mcp"]["binary"] = mcp_bin
+    if mcp_url or mcp_token:
         result["mcp"]["configured"] = True
+        result["mcp"]["compatible"] = bool(result["playwright"] and result["chromium"] and mcp_bin)
+    if mcp_url:
         try:
             with urllib.request.urlopen(mcp_url, timeout=2) as response:
                 result["mcp"]["reachable"] = 200 <= response.status < 500
                 result["mcp"]["status"] = response.status
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             result["mcp"]["error"] = str(exc)
-    result["compatibility"] = "Playwright Python 直接控制浏览器；Playwright MCP 可通过 PLAYWRIGHT_MCP_URL 做连通性检查，本工具不依赖 MCP 专有协议。"
+    result["compatibility"] = "本工具主路径使用 Playwright Python 新建 context；可与上游 geo-data-engine 的 PLAYWRIGHT_MCP_EXTENSION_TOKEN / @playwright/mcp 环境并存。设置 PLAYWRIGHT_MCP_URL 可做本地 MCP 健康检查，MCP 不可用时仍可直接采集。"
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["playwright"] else 1
 

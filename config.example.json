@@ -11,7 +11,7 @@
   ],
   "providers": {
     "doubao": {"url": "https://www.doubao.com/chat/"},
-    "kimi": {"url": "https://kimi.moonshot.cn/"}
+    "kimi": {"url": "https://www.kimi.com/"}
   },
   "sampling": {"samples_per_question": 3}
 }

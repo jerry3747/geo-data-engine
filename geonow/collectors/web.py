@@ -8,7 +8,7 @@ from typing import Any
 
 PROVIDER_DEFAULTS = {
     "doubao": {"url": "https://www.doubao.com/chat/", "name": "豆包"},
-    "kimi": {"url": "https://kimi.moonshot.cn/", "name": "Kimi"},
+    "kimi": {"url": "https://www.kimi.com/", "name": "Kimi"},
 }
 
 

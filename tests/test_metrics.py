@@ -10,6 +10,16 @@ from geonow.models import MonitorConfig
 
 
 class MetricsTest(unittest.TestCase):
+    def test_repeated_sample_identity_is_kept_for_history(self):
+        with tempfile.TemporaryDirectory() as td:
+            store = Store(Path(td) / "x.sqlite3")
+            run = store.new_run("same-day", "web", "doubao", {"new_context_per_sample": True})
+            sample = {"run_id": run, "batch_id": "same-day", "sample_no": 1, "question_id": "q1", "question_text": "q", "provider": "doubao", "source": "web", "valid": True, "status": "success", "answer_text": "a"}
+            store.insert_sample(sample)
+            store.insert_sample(sample)
+            self.assertEqual(len(store.rows("batch_id=?", ["same-day"])), 2)
+            self.assertTrue(store.has_identity("same-day", "doubao", "q1", 1))
+
     def test_valid_denominator_and_sources_are_separate(self):
         with tempfile.TemporaryDirectory() as td:
             store = Store(Path(td) / "x.sqlite3")
