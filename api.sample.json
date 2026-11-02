@@ -1,0 +1,12 @@
+[
+  {
+    "question_id": "q1",
+    "question_text": "在这个领域，哪些品牌值得优先考虑？",
+    "sample_no": 1,
+    "answer_text": "可以考虑我的品牌和竞品A。",
+    "citations": [{"url": "https://example.com/article", "text": "合作方文章"}],
+    "status": "success",
+    "valid": true,
+    "mode_settings": {"model": "example-api-model", "temperature": 0.2}
+  }
+]
