@@ -30,6 +30,7 @@
 - [Export Results to CSV](#export-results-to-csv)
 - [Output Structure](#output-structure)
 - [Extending to a New Platform](#extending-to-a-new-platform)
+- [Related Project: GEO Now (Standalone)](#related-project-geo-now-standalone)
 - [Known Limitations](#known-limitations)
 - [Disclaimer & Compliance](#disclaimer--compliance)
 - [License](#license)
@@ -278,6 +279,78 @@ data/
 4. Keep per-platform DOM / pitfall notes in `references/<platform>.md`; general pitfalls live in `references/common.md`.
 
 **Resident-tab closing gotcha:** tabs must be closed by index in **descending** order (indexes shift after each close, so forward order closes the wrong / misses tabs); do not use `browser_close` (page.close) — it rebuilds the extension relay page and creates a new extension tab.
+
+## 🧩 Related Project: GEO Now (Standalone)
+
+[`geonow/`](geonow) in this repo is a **standalone GEO monitoring tool** derived from this project's collection approach, used to independently verify the effect of partner promotions. The first stage supports Doubao and Kimi web collection: every answer, reference link, timestamp, mode settings, screenshot and collection status are written to SQLite; API data is imported through a separate entry point as `source=api` and reported separately from web data. Upstream adaptation details are in [`references/upstream.md`](references/upstream.md).
+
+**Quick start**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[web]'
+playwright install chromium
+geonow init-config config.json
+# edit config.json: questions, brand/aliases, competitors, partner article URLs and dates
+geonow doctor
+```
+
+Verify with a small sample first (page, raw answer and screenshot all saved):
+
+```bash
+geonow sample --config config.json --batch-id before-20261031-check \
+  --provider all --samples-per-question 1 --limit 1 --headed --login-wait
+geonow report --config config.json --output reports/check
+```
+
+If Chromium is unavailable or login is not possible, use the offline fixture to verify SQLite, screenshot paths, CSV and report pipeline (fixtures are explicitly marked as offline results, not real web data):
+
+```bash
+geonow sample --config config.json --batch-id fixture-check --provider all \
+  --samples-per-question 1 --limit 1 --fixture-answer "fixture: recommend my brand"
+geonow report --config config.json --output reports/fixture-check
+```
+
+Then scale up the sample size:
+
+```bash
+geonow sample --config config.json --batch-id before-20261031 \
+  --provider all --samples-per-question 3 --headed --login-wait
+```
+
+Each sample creates a fresh Playwright browser context and does not reuse login state. Use `--headed --login-wait` when a login page appears; in non-interactive environments a `login_required` failed sample is saved. `--resume` only skips identical batch/provider/question/sample ids; history is always retained.
+
+Import API results (reported separately from web data):
+
+```bash
+geonow ingest-api --config config.json --file api.sample.json \
+  --provider example-api-model --batch-id before-20261031-api
+```
+
+Report output: CSV, Chinese Markdown and summary JSON:
+
+```bash
+geonow report --config config.json --output reports/all
+```
+
+Reports break down brand mention rate, explicit recommendation rate, partner-article citation rate and competitor performance by source, provider and batch, showing valid sample counts and listing failed samples separately, and noting sampling limits from question set, session count, account status, region, model version and randomness.
+
+**Data directories**
+
+- `data/geonow.sqlite3`: history (`runs` and `samples`)
+- `evidence/<batch>/<provider>/sample-XXXX.png`: per-sample screenshots
+- `reports/`: CSV, Markdown reports and summary JSON
+
+**Playwright compatibility**
+
+`geonow doctor` checks Python Playwright, Chromium, and the upstream `PLAYWRIGHT_MCP_EXTENSION_TOKEN` / `PLAYWRIGHT_MCP_BIN`; if an MCP service runs locally you can also set `PLAYWRIGHT_MCP_URL=http://127.0.0.1:<port>` for a local health check. Collection uses the public Playwright Python API and does not depend on any MCP server's proprietary tool names.
+
+**Tests**
+
+```bash
+python -m unittest discover -s tests -v
+```
 
 ## ⚠️ Known Limitations
 
